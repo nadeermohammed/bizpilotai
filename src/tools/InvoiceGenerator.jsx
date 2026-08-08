@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FileText, Plus, Trash2, Printer, Check, PlusCircle, Save, FolderOpen } from 'lucide-react'
+import { FileText, Plus, Trash2, Printer, Check, PlusCircle, Save, FolderOpen, Mail } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { saveRecord, getRecords, deleteRecord } from '../utils/db'
@@ -20,6 +20,7 @@ export default function InvoiceGenerator() {
 
   // Database list state
   const [savedInvoices, setSavedInvoices] = useState([])
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
     // Load saved invoices from db.js (Local/Supabase hybrid)
@@ -108,6 +109,44 @@ export default function InvoiceGenerator() {
     // Also save in background
     handleSaveToDb(e)
     window.print()
+  }
+
+  const handleSendEmail = async (e) => {
+    e.preventDefault()
+    if (!clientName || !clientAddress) {
+      toast.error('Please enter client details before sending')
+      return
+    }
+    if (!clientEmail) {
+      toast.error('Please enter a recipient client email address')
+      return
+    }
+
+    setSendingEmail(true)
+
+    // Simulate sending email
+    setTimeout(() => {
+      setSendingEmail(false)
+
+      // Log full telemetry dispatch
+      console.log(`%c[DEMO EMAIL ENGINE] Dispatching Invoice ${invoiceNumber} to ${clientEmail}`, "color: #4f46e5; font-weight: bold; font-size: 14px;");
+      console.log({
+        to: clientEmail,
+        subject: `Tax Invoice ${invoiceNumber} from ${user?.businessName || 'BIZPILOT AI'}`,
+        invoiceDetails: {
+          invoiceNumber,
+          invoiceDate,
+          clientName,
+          clientAddress,
+          items,
+          subtotal,
+          gstAmount,
+          total
+        }
+      });
+
+      toast.success(`Invoice ${invoiceNumber} sent to ${clientEmail}!`)
+    }, 1500)
   }
 
   return (
@@ -203,8 +242,15 @@ export default function InvoiceGenerator() {
 
             <div className="flex flex-col gap-2 mt-2">
               <button
+                onClick={handleSendEmail}
+                disabled={sendingEmail}
+                className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {sendingEmail ? <span className="spinner"></span> : <><Mail className="w-4 h-4" /> Send via Email</>}
+              </button>
+              <button
                 onClick={handlePrint}
-                className="btn-primary w-full py-2.5 flex items-center justify-center gap-2"
+                className="btn-secondary w-full py-2.5 flex items-center justify-center gap-2"
               >
                 <Printer className="w-4 h-4" /> Print / PDF
               </button>
