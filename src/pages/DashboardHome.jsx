@@ -19,7 +19,8 @@ import {
   ArrowRight,
   TrendingUp,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react'
 
 const toolsData = [
@@ -43,6 +44,8 @@ export default function DashboardHome() {
   const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
+  
+  const hasGeminiKey = (localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '').trim().length > 10
 
   const categories = ['All', 'Communication', 'Finance', 'Business', 'Marketing', 'Creative', 'Utility']
 
@@ -55,6 +58,30 @@ export default function DashboardHome() {
 
   return (
     <div className="flex flex-col gap-8 fade-in">
+      {/* Offline Mode Warning Banner */}
+      {!hasGeminiKey && (
+        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex gap-3 items-start">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wide">Offline Simulation Mode Active</h4>
+              <p className="text-xs text-amber-700 mt-0.5 leading-normal">
+                No Gemini API key detected. The tools are currently running in Offline Template Mode (simulated responses). 
+                To generate live, real-time custom AI outputs instead of templates, please add your key.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/dashboard/settings"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-colors text-decoration-none"
+          >
+            Configure Key
+          </Link>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="rounded-3xl glass border border-blue-200 p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">

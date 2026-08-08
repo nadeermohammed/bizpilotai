@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Sparkles, Mail, Lock, User, Briefcase, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { registerUserInDb } from '../utils/db'
 
 export default function RegisterPage() {
   const { login } = useAuth()
@@ -13,7 +14,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!name || !businessName || !email || !password) {
       toast.error('Please fill in all fields')
@@ -22,20 +23,25 @@ export default function RegisterPage() {
 
     setLoading(true)
 
-    // Simulate signup processing
-    setTimeout(() => {
-      setLoading(false)
-      const mockUser = {
-        name: name,
-        businessName: businessName,
-        email: email,
-        tier: 'Free',
-        credits: 50
+    try {
+      const dbUser = await registerUserInDb(name, businessName, email, password)
+      const appUser = {
+        name: dbUser.name,
+        businessName: dbUser.business_name,
+        email: dbUser.email,
+        role: dbUser.role,
+        tier: dbUser.role === 'admin' ? 'Enterprise' : 'Free',
+        credits: dbUser.credits
       }
-      login(mockUser)
+      login(appUser)
       toast.success(`Account created! Welcome, ${name}!`)
       navigate('/dashboard')
-    }, 800)
+    } catch (error) {
+      toast.error(error.message || 'Registration failed. Please try again.')
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

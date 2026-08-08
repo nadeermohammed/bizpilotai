@@ -1,12 +1,22 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
 import { useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 
-import LandingPage from './pages/LandingPage'
+// Authentication
+import { AuthProvider, useAuth } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
+import SignupPage from './pages/SignupPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+
+// Core Pages
+import LandingPage from './pages/LandingPage'
 import DashboardLayout from './pages/DashboardLayout'
 import DashboardHome from './pages/DashboardHome'
+import BuilderPage from './pages/BuilderPage'
+import ProfilePage from './pages/ProfilePage'
+import AccountSettingsPage from './pages/AccountSettingsPage'
 
 // Tools
 import EmailWriter from './tools/EmailWriter'
@@ -23,27 +33,42 @@ import ExpenseTracker from './tools/ExpenseTracker'
 import ChatAssistant from './tools/ChatAssistant'
 import PDFConverter from './tools/PDFConverter'
 import OCRScanner from './tools/OCRScanner'
-import Settings from './tools/Settings'
 
-import { AuthContext } from './context/AuthContext'
+function ProtectedRoute({ children }) {
+  const { user, authState } = useAuth()
+  const location = useLocation()
+
+  if (authState === 'checking') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 font-sans">
+        <div className="spinner mb-4"></div>
+        <p className="text-sm font-hud text-slate-500 animate-pulse">Checking credentials status...</p>
+      </div>
+    )
+  }
+
+  if (authState === 'verification-pending') {
+    return <Navigate to="/verify-email" replace />
+  }
+
+  if (!user) {
+    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />
+  }
+
+  return children
+}
+
+function AdminRoute({ children }) {
+  const { user } = useAuth()
+  if (user?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />
+  }
+  return children
+}
 
 export default function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('bizpilot_user')
-    return saved ? JSON.parse(saved) : null
-  })
-
-  const login = (userData) => {
-    localStorage.setItem('bizpilot_user', JSON.stringify(userData))
-    setUser(userData)
-  }
-  const logout = () => {
-    localStorage.removeItem('bizpilot_user')
-    setUser(null)
-  }
-
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthProvider>
       <BrowserRouter>
         <Toaster
           position="top-right"
@@ -60,10 +85,17 @@ export default function App() {
           }}
         />
         <Routes>
+          {/* Public Views */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
-          <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterPage />} />
-          <Route path="/dashboard" element={user ? <DashboardLayout /> : <Navigate to="/login" />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/register" element={<Navigate to="/signup" replace />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+          {/* Protected Dashboard Tools */}
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<DashboardHome />} />
             <Route path="email" element={<EmailWriter />} />
             <Route path="invoice" element={<InvoiceGenerator />} />
@@ -79,11 +111,19 @@ export default function App() {
             <Route path="chat" element={<ChatAssistant />} />
             <Route path="pdf-converter" element={<PDFConverter />} />
             <Route path="ocr" element={<OCRScanner />} />
-            <Route path="settings" element={<Settings />} />
+            <Route path="builder" element={<AdminRoute><BuilderPage /></AdminRoute>} />
           </Route>
-          <Route path="*" element={<Navigate to="/" />} />
+
+          {/* Protected Top-Level User Views Sharing the Shell Layout */}
+          <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<AccountSettingsPage />} />
+          </Route>
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
-    </AuthContext.Provider>
+    </AuthProvider>
   )
 }

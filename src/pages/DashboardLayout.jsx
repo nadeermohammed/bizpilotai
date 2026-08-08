@@ -21,7 +21,9 @@ import {
   X,
   CreditCard,
   Building,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Shield,
+  User
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -41,19 +43,28 @@ const navItems = [
   { path: '/dashboard/chat', label: 'AI Chat Assistant', icon: MessageCircle },
   { path: '/dashboard/pdf-converter', label: 'PDF to Excel Tool', icon: FileUp },
   { path: '/dashboard/ocr', label: 'OCR Scanner Tool', icon: ScanLine },
-  { path: '/dashboard/settings', label: 'System Settings', icon: SettingsIcon },
+  { path: '/profile', label: 'My Profile', icon: User },
+  { path: '/settings', label: 'Account Settings', icon: SettingsIcon },
+  { path: '/dashboard/builder', label: 'Builder Panel', icon: Shield },
 ]
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  const filteredNavItems = navItems.filter(item => {
+    if (item.path === '/dashboard/builder') {
+      return user?.role === 'admin'
+    }
+    return true
+  })
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
     toast.success('Logged out successfully')
-    navigate('/')
+    navigate('/login')
   }
 
   // Get active path name for breadcrumbs / title
@@ -86,7 +97,7 @@ export default function DashboardLayout() {
 
           {/* Navigation Links */}
           <nav className="p-4 flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
-            {navItems.map((item, idx) => {
+            {filteredNavItems.map((item, idx) => {
               const Icon = item.icon
               return (
                 <NavLink
@@ -107,9 +118,17 @@ export default function DashboardLayout() {
         {/* User Card & Logout */}
         <div className="p-4 border-t border-blue-100 bg-slate-50">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 font-bold">
-              {user?.name?.[0] || 'U'}
-            </div>
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt={user.name}
+                className="w-10 h-10 rounded-full border border-blue-200 object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 font-bold">
+                {user?.name?.[0] || 'U'}
+              </div>
+            )}
             <div className="overflow-hidden">
               <h4 className="text-sm font-semibold text-slate-800 truncate">{user?.name || 'User'}</h4>
               <p className="text-[11px] text-slate-500 flex items-center gap-1 truncate">
