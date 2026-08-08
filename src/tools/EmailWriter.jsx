@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Mail, Sparkles, Copy, Check, RotateCcw } from 'lucide-react'
+import { Mail, Sparkles, Copy, Check, RotateCcw, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { generateAIResponse } from '../utils/ai'
 
 export default function EmailWriter() {
   const [recipient, setRecipient] = useState('')
+  const [recipientEmail, setRecipientEmail] = useState('')
   const [subject, setSubject] = useState('')
   const [tone, setTone] = useState('Professional')
   const [keyPoints, setKeyPoints] = useState('')
@@ -44,8 +45,30 @@ export default function EmailWriter() {
     setTimeout(() => setCopied(false), 200)
   }
 
+  const handleSendEmail = () => {
+    if (!recipientEmail) {
+      toast.error('Please enter a recipient email address first')
+      return
+    }
+
+    let mailSubject = subject
+    let mailBody = result
+
+    // Try to separate the Subject line from the generated body
+    const subjectMatch = result.match(/Subject:\s*([^\n]+)/i)
+    if (subjectMatch) {
+      mailSubject = subjectMatch[1].trim()
+      mailBody = result.replace(/Subject:\s*[^\n]+\n*/i, '').trim()
+    }
+
+    const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`
+    window.location.href = mailtoUrl
+    toast.success('Launching your email client...')
+  }
+
   const handleReset = () => {
     setRecipient('')
+    setRecipientEmail('')
     setSubject('')
     setTone('Professional')
     setKeyPoints('')
@@ -53,32 +76,45 @@ export default function EmailWriter() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-6 fade-in">
-      <div className="flex justify-between items-center">
-        <div>
-          <span className="badge mb-2"><Mail className="w-3.5 h-3.5" /> Communication</span>
-          <h1 className="text-2xl font-display font-bold text-white">AI Email Writer</h1>
-          <p className="text-sm text-gray-400">Generate professional emails customized for your clients, staff, or vendors.</p>
-        </div>
+    <div className="max-w-4xl mx-auto flex flex-col gap-6 fade-in hud-panel">
+      <div>
+        <span className="badge mb-2"><Mail className="w-3.5 h-3.5" /> COMMUNICATION MODULE</span>
+        <h1 className="text-2xl font-display font-bold text-slate-800">AI EMAIL WRITER</h1>
+        <p className="text-sm text-slate-500">Draft professional client, staff, or vendor correspondence and dispatch it instantly.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Form panel */}
-        <form onSubmit={handleGenerate} className="glass p-6 rounded-2xl border border-indigo-500/10 flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Recipient Name</label>
-            <input
-              type="text"
-              placeholder="e.g. Ramesh Kumar / Client Support Team"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              className="input-field"
-              required
-            />
+        <form onSubmit={handleGenerate} className="glass p-6 rounded-2xl border border-blue-200 flex flex-col gap-4 bg-slate-55/15">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-2">EMAIL DETAILS</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-hud font-bold text-slate-600 uppercase tracking-wider mb-1.5">Recipient Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Ramesh Kumar"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                className="input-field"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-hud font-bold text-slate-600 uppercase tracking-wider mb-1.5">Recipient Email</label>
+              <input
+                type="email"
+                placeholder="e.g. ramesh@example.com"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                className="input-field"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email Subject / Purpose</label>
+            <label className="block text-[10px] font-hud font-bold text-slate-600 uppercase tracking-wider mb-1.5">Email Subject / Purpose</label>
             <input
               type="text"
               placeholder="e.g. Request for Quotation / Project Extension Delay"
@@ -90,7 +126,7 @@ export default function EmailWriter() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email Tone</label>
+            <label className="block text-[10px] font-hud font-bold text-slate-600 uppercase tracking-wider mb-1.5">Email Tone</label>
             <select
               value={tone}
               onChange={(e) => setTone(e.target.value)}
@@ -105,7 +141,7 @@ export default function EmailWriter() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Key Points / Details</label>
+            <label className="block text-[10px] font-hud font-bold text-slate-600 uppercase tracking-wider mb-1.5">Key Points / Details</label>
             <textarea
               placeholder="e.g. We need to postpone our meeting to next Thursday because of a product scheduling conflict."
               value={keyPoints}
@@ -123,11 +159,11 @@ export default function EmailWriter() {
             >
               {loading ? (
                 <>
-                  <span className="spinner"></span> Drafting...
+                  <span className="spinner"></span> DRAFTING ENGINE...
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" /> Generate Email
+                  <Sparkles className="w-4 h-4" /> Generate Email Draft
                 </>
               )}
             </button>
@@ -144,24 +180,34 @@ export default function EmailWriter() {
 
         {/* Results Panel */}
         <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">AI Drafted Result</h3>
+          <div className="flex justify-between items-center h-8">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">DRAFTED TELEMETRY</h3>
+            
             {result && (
-              <button onClick={handleCopy} className="copy-btn">
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy Email'}</span>
-              </button>
+              <div className="flex gap-2">
+                <button onClick={handleCopy} className="copy-btn py-1 px-3 text-xs flex items-center gap-1.5 border border-blue-200 rounded-lg hover:bg-blue-50/50">
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                </button>
+                
+                {recipientEmail && (
+                  <button onClick={handleSendEmail} className="btn-primary py-1 px-3 text-xs flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Mail</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
           {result ? (
-            <div className="result-box font-mono text-sm leading-relaxed border border-indigo-500/20 bg-indigo-500/5 glow-indigo fade-in">
+            <div className="result-box font-hud text-sm leading-relaxed border border-blue-200 bg-slate-50 p-5 rounded-2xl whitespace-pre-wrap max-h-[480px] overflow-y-auto fade-in text-slate-800">
               {result}
             </div>
           ) : (
-            <div className="result-box flex flex-col items-center justify-center text-center text-gray-500 border border-dashed border-indigo-500/10">
-              <Mail className="w-10 h-10 text-gray-600 mb-2" />
-              <p className="text-sm">Generated email output will appear here.</p>
+            <div className="result-box flex flex-col items-center justify-center text-center text-slate-400 border border-dashed border-blue-200 min-h-[300px] rounded-2xl glass">
+              <Mail className="w-10 h-10 text-blue-300 mb-2" />
+              <p className="text-xs">Generated draft result output will populate here.</p>
             </div>
           )}
         </div>
